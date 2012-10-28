@@ -1,0 +1,4 @@
+cmm
+===
+
+Contracts Made Manifest
