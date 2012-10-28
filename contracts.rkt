@@ -3,7 +3,7 @@
 (require redex)
 
 ;;----------------------------------------------------------------------------
-;; Base types and constants for λc and λh.
+;; Base types and constants for λc and λh
 
 (define-language base
   (B Bool Int)
@@ -12,7 +12,7 @@
   (x variable-not-otherwise-mentioned))
 
 ;; ----------------------------------------------------------------------------
-;; Syntax for λc.
+;; Syntax for λc
 
 (define-extended-language λc base
   (T B (T -> T))
