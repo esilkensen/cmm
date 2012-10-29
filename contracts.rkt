@@ -8,6 +8,7 @@
 (define-language base
   (B Bool Int)
   (k true false number)
+  (O pos nonzero =)
   (l string)
   (x variable-not-otherwise-mentioned))
 
@@ -17,10 +18,10 @@
 (define-extended-language λc base
   (T B (T -> T))
   (c {x : B t} (c ↦ c))
-  (t x k (λ (x : T) t) (t t) (⇑ l) (c l l) ({x : B t} t k l))
+  (t x k (λ (x : T) t) (t t) (⇑ l) (c l l) ({x : B t} t k l) (O t ...))
   (v k (λ (x : T) t) (c l l) ((c ↦ c l l) v))
   (r v (⇑ l))
-  (E (hole t) (v hole) ({x : B t} hole k l)))
+  (E (hole t) (v hole) ({x : B t} hole k l) (O hole t ...) (O v ... hole)))
 
 ;; ----------------------------------------------------------------------------
 ;; Operational semantics for λc
@@ -40,7 +41,23 @@
    [--> (in-hole E (⇑ l)) (⇑ l) "E_Blame"]
    [--> (in-hole E t_1) (in-hole E t_2)
         (where (t_2) ,(apply-reduction-relation ->λc (term t_1)))
-        "E_Compat"]))
+        "E_Compat"]
+   [--> (O v ...) (δ O v ...) "E_Prim"]))
+
+(define-metafunction λc
+  δ : O k ... -> k
+  [(δ pos k)
+   ,(if (positive? (term k))
+        (term true)
+        (term false))]
+  [(δ nonzero k)
+   ,(if (not (zero? (term k)))
+        (term true)
+        (term false))]
+  [(δ = k_1 k_2)
+   ,(if (eq? (term k_1) (term k_2))
+        (term true)
+        (term false))])
 
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λc
@@ -79,7 +96,9 @@
    (side-condition
     (t_2 . ⊃ . (subst x k t_1)))
    ----------------------------------- "T_Checking"
-   (() . ⊢ . ({x : B t_1} t_2 k l) B)])
+   (() . ⊢ . ({x : B t_1} t_2 k l) B)]
+  
+  [(Γ . ⊢ . (O t ...) Bool) "T_Prim"])
 
 (define-judgment-form λc+Γ
   #:mode (⊢c I O)
@@ -156,5 +175,23 @@
 
 (module+ test
   (define t1 (term (({x : Int true} "l" "l'") 1)))
-  (test-->> ->λc t1 (term 1))
-  (test-equal (judgment-holds (() . ⊢ . ,t1 T) T) (term (Int))))
+  (define r1 (term 1))
+  (define T1 (term Int))
+  
+  (define t2 (term (({x : Int (nonzero x)} "l" "l'") 1)))
+  (define r2 (term 1))
+  (define T2 (term Int))
+  
+  (define t3 (term (({y : Int (pos y)} "l" "l'") 1)))
+  (define r3 (term 1))
+  (define T3 (term Int))
+  
+  (define t4 (term (({y : Int (pos y)} "l" "l'") -1)))
+  (define r4 (term (⇑ "l")))
+  (define T4 (term Int))
+  
+  (for ([t (list t1 t2 t3 t4)]
+        [r (list r1 r2 r3 r4)]
+        [T (list T1 T2 T3 T4)])
+    (test-->> ->λc t r)
+    (test-equal (judgment-holds (() . ⊢ . ,t T) T) (term (,T)))))
