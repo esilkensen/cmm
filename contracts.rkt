@@ -27,39 +27,86 @@
 
 (define ->λc
   (reduction-relation
-   λc #:arrow -->c
-   [-->c (k v) (kv v) (where kv (denote k)) "E_Const"]
-   [-->c ((λ (x : T) t) v) (subst x v t) "E_Beta"]
-   [-->c ((((c_1 ↦ c_2) l_p l_n) v_1) v_2)
-         ((c_2 l_p l_n) (v_1 ((c_1 l_n l_p) v_2)))
-         "E_CDecomp"]
-   [-->c (({x : B t} l_p l_n) k)
-         ({x : B t} (subst x k t) k l_p)
-         "E_CCheck"]
-   [-->c ({x : B t} true k l) k "E_OK"]
-   [-->c ({x : B t} false k l) (⇑ l) "E_False"]
-   [-->c (in-hole E (⇑ l)) (⇑ l) "E_Blame"]
-   [-->c (in-hole E t_1) (in-hole E t_2)
-         (where (t_2) ,(apply-reduction-relation ->λc (term t_1)))
-         "E_Compat"]))
+   λc
+   [--> ((λ (x : T) t) v) (subst x v t) "E_Beta"]
+   [--> ((((c_1 ↦ c_2) l_p l_n) v_1) v_2)
+        ((c_2 l_p l_n) (v_1 ((c_1 l_n l_p) v_2)))
+        "E_CDecomp"]
+   [--> (({x : B t} l_p l_n) k)
+        ({x : B t} (subst x k t) k l_p)
+        "E_CCheck"]
+   [--> ({x : B t} true k l) k "E_OK"]
+   [--> ({x : B t} false k l) (⇑ l) "E_False"]
+   [--> (in-hole E (⇑ l)) (⇑ l) "E_Blame"]
+   [--> (in-hole E t_1) (in-hole E t_2)
+        (where (t_2) ,(apply-reduction-relation ->λc (term t_1)))
+        "E_Compat"]))
 
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λc
 
 (define-extended-language λc+Γ λc
-  [Γ · (x : T Γ)])
+  [Γ ((x T) ...)])
 
 (define-judgment-form λc+Γ
   #:mode (⊢ I I O)
   #:contract (⊢ Γ t T)
-  [---------------------- "T_Var"
-   ((x : T Γ) . ⊢ . x T)]
+  [(where T (lookup x Γ))
+   ---------------------- "T_Var"
+   (Γ . ⊢ . x T)]
   [(where T (ty-c k))
    ------------------ "T_Const"
-   (Γ . ⊢ . k T)]  
-  [((x : T_1 Γ) . ⊢ . t T_2)
+   (Γ . ⊢ . k T)]
+  [((extend x T_1 Γ) . ⊢ . t T_2)
    --------------------------------------- "T_Lam"
-   (Γ . ⊢ . (λ (x : T_1) t) (T_1 -> T_2))])
+   (Γ . ⊢ . (λ (x : T_1) t) (T_1 -> T_2))]
+  [(Γ . ⊢ . t_1 (T_1 -> T_2))
+   (Γ . ⊢ . t_2 T_1)
+   -------------------------- "T_App"
+   (Γ . ⊢ . (t_1 t_2) T_2)]
+  [(⊢c c T)
+   ------------------------------- "T_Contract"
+   (Γ . ⊢ . (c l_p l_n) (T -> T))]
+  [(() . ⊢ . k B)
+   (() . ⊢ . t_2 Bool)
+   (⊢c {x : B t_1} B)
+   (side-condition
+    (t_2 . ⊃ . (subst x k t_1)))
+   ----------------------------------- "T_Checking"
+   (() . ⊢ . ({x : B t_1} t_2 k l) B)])
+                  
+(define-judgment-form λc+Γ
+  #:mode (⊢c I O)
+  #:contract (⊢c c T)
+  [(((x B)) . ⊢ . t Bool)
+   ---------------------- "T_BaseC"
+   (⊢c {x : B t} B)]
+  [(⊢c c_1 T_1)
+   (⊢c c_2 T_2)
+   ------------------------------ "T_FunC"
+   (⊢c (c_1 ↦ c_2) (T_1 -> T_2))])
+
+(define-metafunction λc+Γ
+  ⊃ : t t -> #t or #f
+  [(⊃ t_1 t_2)
+   ,(if (eq? (term true) (term B_1))
+        (eq? (term true) (term B_2))
+        #t)
+   (where ((B_1) (B_2))
+          (,(apply-reduction-relation* ->λc (term t_1))
+           ,(apply-reduction-relation* ->λc (term t_2))))])
+
+(define-metafunction λc+Γ
+  lookup : x Γ -> T or #f
+  [(lookup x ()) #f]
+  [(lookup x ((x T) (x_1 T_1) ...)) T]
+  [(lookup x ((x_1 T_1) (x_2 T_2) ...))
+   (lookup x ((x_2 T_2) ...))])
+
+(define-metafunction λc+Γ
+  extend : x T Γ -> Γ
+  [(extend x T ((x_1 T_1) ...))
+   ((x T) (x_1 T_1) ...)])
 
 (define-metafunction λc
   ty-c : k -> T
@@ -96,3 +143,9 @@
    (subst-vars (x_1 any_1) 
                (subst-vars (x_2 any_2) ... any_3))]
   [(subst-vars any) any])
+
+;; ----------------------------------------------------------------------------
+
+(define t1 (term (({x : Int true} "l" "l'") 1)))
+(test-->> ->λc t1 (term 1))
+(test-equal (judgment-holds (() . ⊢ . ,t1 T) T) (term (Int)))
