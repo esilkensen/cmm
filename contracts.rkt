@@ -8,7 +8,7 @@
 (define-language base
   (B Bool Int)
   (k true false number)
-  (O pos nonzero =)
+  (O pos nonzero = pred)
   (l string)
   (x variable-not-otherwise-mentioned))
 
@@ -57,7 +57,8 @@
   [(δ = k_1 k_2)
    ,(if (eq? (term k_1) (term k_2))
         (term true)
-        (term false))])
+        (term false))]
+  [(δ pred k) ,(- (term k) 1)])
 
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λc
@@ -98,7 +99,22 @@
    ----------------------------------- "T_Checking"
    (() . ⊢ . ({x : B t_1} t_2 k l) B)]
   
-  [(Γ . ⊢ . (O t ...) Bool) "T_Prim"])
+  [(Γ . ⊢ . t Int)
+   ----------------------- "T_Pos"
+   (Γ . ⊢ . (pos t) Bool)]
+  
+  [(Γ . ⊢ . t Int)
+   --------------------------- "T_Nonzero"
+   (Γ . ⊢ . (nonzero t) Bool)]
+  
+  [(Γ . ⊢ . t_1 B)
+   (Γ . ⊢ . t_2 B)
+   --------------------------- "T_Equal"
+   (Γ . ⊢ . (= t_1 t_2) Bool)]
+  
+  [(Γ . ⊢ . t Int)
+   ----------------------- "T_Pred"
+   (Γ . ⊢ . (pred t) Int)])
 
 (define-judgment-form λc+Γ
   #:mode (⊢c I O)
@@ -190,8 +206,23 @@
   (define r4 (term (⇑ "l")))
   (define T4 (term Int))
   
-  (for ([t (list t1 t2 t3 t4)]
-        [r (list r1 r2 r3 r4)]
-        [T (list T1 T2 T3 T4)])
+  (define t5 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
+                     (λ (x : Int) (pred x))) 0)))
+  (define r5 (term (⇑ "l'")))
+  (define T5 (term Int))
+  
+  (define t6 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
+                     (λ (x : Int) (pred x))) 1)))
+  (define r6 (term (⇑ "l")))
+  (define T6 (term Int))
+  
+  (define t7 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
+                     (λ (x : Int) (pred x))) 2)))
+  (define r7 (term 1))
+  (define T7 (term Int))
+  
+  (for ([t (list t1 t2 t3 t4 t5 t6 t7)]
+        [r (list r1 r2 r3 r4 r5 r6 r7)]
+        [T (list T1 T2 T3 T4 T5 T6 T7)])
     (test-->> ->λc t r)
     (test-equal (judgment-holds (() . ⊢ . ,t T) T) (term (,T)))))
