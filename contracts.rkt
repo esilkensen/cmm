@@ -51,22 +51,28 @@
 (define-judgment-form λc+Γ
   #:mode (⊢ I I O)
   #:contract (⊢ Γ t T)
+  
   [(where T (lookup x Γ))
    ---------------------- "T_Var"
    (Γ . ⊢ . x T)]
+  
   [(where T (ty-c k))
    ------------------ "T_Const"
    (Γ . ⊢ . k T)]
+  
   [((extend x T_1 Γ) . ⊢ . t T_2)
    --------------------------------------- "T_Lam"
    (Γ . ⊢ . (λ (x : T_1) t) (T_1 -> T_2))]
+  
   [(Γ . ⊢ . t_1 (T_1 -> T_2))
    (Γ . ⊢ . t_2 T_1)
    -------------------------- "T_App"
    (Γ . ⊢ . (t_1 t_2) T_2)]
+  
   [(⊢c c T)
    ------------------------------- "T_Contract"
    (Γ . ⊢ . (c l_p l_n) (T -> T))]
+  
   [(() . ⊢ . k B)
    (() . ⊢ . t_2 Bool)
    (⊢c {x : B t_1} B)
@@ -74,13 +80,15 @@
     (t_2 . ⊃ . (subst x k t_1)))
    ----------------------------------- "T_Checking"
    (() . ⊢ . ({x : B t_1} t_2 k l) B)])
-                  
+
 (define-judgment-form λc+Γ
   #:mode (⊢c I O)
   #:contract (⊢c c T)
+  
   [(((x B)) . ⊢ . t Bool)
    ---------------------- "T_BaseC"
    (⊢c {x : B t} B)]
+  
   [(⊢c c_1 T_1)
    (⊢c c_2 T_2)
    ------------------------------ "T_FunC"
@@ -96,6 +104,12 @@
           (,(apply-reduction-relation* ->λc (term t_1))
            ,(apply-reduction-relation* ->λc (term t_2))))])
 
+(define-metafunction λc
+  ty-c : k -> T
+  [(ty-c true) Bool]
+  [(ty-c false) Bool]
+  [(ty-c number) Int])
+
 (define-metafunction λc+Γ
   lookup : x Γ -> T or #f
   [(lookup x ()) #f]
@@ -107,12 +121,6 @@
   extend : x T Γ -> Γ
   [(extend x T ((x_1 T_1) ...))
    ((x T) (x_1 T_1) ...)])
-
-(define-metafunction λc
-  ty-c : k -> T
-  [(ty-c true) Bool]
-  [(ty-c false) Bool]
-  [(ty-c number) Int])
 
 ;; ----------------------------------------------------------------------------
 
@@ -146,6 +154,7 @@
 
 ;; ----------------------------------------------------------------------------
 
-(define t1 (term (({x : Int true} "l" "l'") 1)))
-(test-->> ->λc t1 (term 1))
-(test-equal (judgment-holds (() . ⊢ . ,t1 T) T) (term (Int)))
+(module+ test
+  (define t1 (term (({x : Int true} "l" "l'") 1)))
+  (test-->> ->λc t1 (term 1))
+  (test-equal (judgment-holds (() . ⊢ . ,t1 T) T) (term (Int))))
