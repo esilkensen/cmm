@@ -36,6 +36,133 @@
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λh
 
+(define-extended-language λh+∆ λh
+  [∆ ((x S) ...)])
+
+(define-judgment-form λh+∆
+  #:mode (⊢ I I O)
+  #:contract (⊢ ∆ s S)
+  
+  [(where S (lookup x ∆))
+   ---------------------- "S_Var"
+   (∆ . ⊢ . x S)]
+  
+  [(where S (ty-h k))
+   ------------------ "S_Const"
+   (∆ . ⊢ . k S)]
+  
+  [((extend x S_1 ∆) . ⊢ . s S_2)
+   --------------------------------------- "S_Lam"
+   (∆ . ⊢ . (λ (x : S_1) s) (S_1 -> S_2))]
+  
+  [(∆ . ⊢ . s_1 (S_1 -> S_2))
+   (∆ . ⊢ . s_2 S_1)
+   -------------------------- "S_App"
+   (∆ . ⊢ . (s_1 s_2) S_2)]
+  
+  [(⊢c S_1)
+   (⊢c S_2)
+   (side-condition
+    (equal (erase S_1) (erase S_2)))
+   ------------------------------------- "S_Cast"
+   (∆ . ⊢ . (S_1 ⇒ S_2 l) (S_1 -> S_2))]
+  
+;  [(⊢c S)
+;   ------------------ "S_Blame"
+;   (∆ . ⊢ . (⇑ l) S)]
+  
+;  [(∆ . ⊢ . s S_1)
+;   (⊢c S_2)
+;   (S_1 . <: . S_2)
+;   ---------------- "S_Sub"
+;   (∆ . ⊢ . s S_2)]
+  
+  [(() . ⊢ . k {x_1 : B true})
+   (() . ⊢ . s_2 {x_2 : Bool true})
+   (⊢c {x : B s_1})
+   (side-condition
+    (s_2 . ⊃ . (subst x k s_1)))
+   --------------------------------------------- "S_Checking"
+   (() . ⊢ . ({x : B s_1} s_2 k l) {x : B s_1})]
+  
+  [(∆ . ⊢ . s Int)
+   ----------------------- "S_Pos"
+   (∆ . ⊢ . (pos s) Bool)]
+  
+  [(∆ . ⊢ . s Int)
+   --------------------------- "S_Nonzero"
+   (∆ . ⊢ . (nonzero s) Bool)]
+  
+  [(∆ . ⊢ . s_1 B)
+   (∆ . ⊢ . s_2 B)
+   --------------------------- "S_Equal"
+   (∆ . ⊢ . (= s_1 s_2) Bool)]
+  
+  [(∆ . ⊢ . s Int)
+   ----------------------- "S_Pred"
+   (∆ . ⊢ . (pred s) Int)])
+
+(define-judgment-form λh+∆
+  #:mode (<: I I)
+  #:contract (<: S S)
+  
+  [(where (k ...) (K B))
+   (side-condition
+    (((subst x_1 k s_1) . ⊃ . (subst x_2 k s_2)) ...))
+   --------------------------------------------------- "SSub_Refine"
+   ({x_1 : B s_1} . <: . {x_2 : B s_2})]
+  
+  [(S_21 . <: . S_11)
+   (S_12 . <: . S_22)
+   --------------------------------------- "SSub_Fun"
+   ((S_11 -> S_12) . <: . (S_21 -> S_22))])
+
+(define-judgment-form λh+∆
+  #:mode (⊢c I)
+  #:contract (⊢c S)
+  
+  [(⊢c {x : B true}) "SWF_Raw"]
+  
+  [(((x {x : B true})) . ⊢ . s {x : Bool true})
+   -------------------------------------------- "SWF_Refine"
+   (⊢c {x : B s})]
+  
+  [(⊢c S_1)
+   (⊢c S_2)
+   ------------------ "SWF_Fun"
+   (⊢c (S_1 -> S_2))])
+
+(define-metafunction λh+∆
+  ⊃ : s s -> #t or #f
+  [(⊃ s_1 s_2)
+   ,(if (eq? (term true) (term B_1))
+        (eq? (term true) (term B_2))
+        #t)
+   (where ((B_1) (B_2))
+          (,(apply-reduction-relation* ->λh (term s_1))
+           ,(apply-reduction-relation* ->λh (term s_2))))])
+
+(define-metafunction λh
+  K : B -> (k ...)
+  [(K Bool) (true false)]
+  [(K Int) (-1 0 1)])
+
+(define-metafunction λh
+  ty-h : k -> S
+  [(ty-h k) {x : B (= x k)}])
+
+(define-metafunction λh+∆
+  lookup : x ∆ -> S or #f
+  [(lookup x ()) #f]
+  [(lookup x ((x S) (x_1 S_1) ...)) S]
+  [(lookup x ((x_1 S_1) (x_2 S_2) ...))
+   (lookup x ((x_2 S_2) ...))])
+
+(define-metafunction λh+∆
+  extend : x S ∆ -> ∆
+  [(extend x S ((x_1 S_1) ...))
+   ((x S) (x_1 S_1) ...)])
+
 ;; ----------------------------------------------------------------------------
 
 (define-metafunction λh
