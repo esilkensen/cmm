@@ -27,7 +27,7 @@
         ({x : B t} (subst x k t) k l_p)
         "E_CCheck"]
    [--> ({x : B t} true k l) k "E_OK"]
-   [--> ({x : B t} false k l) (⇑ l) "E_False"]
+   [--> ({x : B t} false k l) (⇑ l) "E_Fail"]
    [--> (in-hole E (⇑ l)) (⇑ l) "E_Blame"]
    [--> (in-hole E t_1) (in-hole E t_2)
         (where (t_2) ,(apply-reduction-relation ->λc (term t_1)))
