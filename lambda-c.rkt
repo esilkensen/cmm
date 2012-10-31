@@ -33,9 +33,11 @@
 (define-extended-judgment-form λc ⊢base
   #:mode (⊢ I I O)
   #:contract (⊢ Γ t T)
+  
   [(⊢c c T)
    ------------------------------- "Contract"
    (Γ . ⊢ . (c l_p l_n) (T -> T))]
+  
   [(() . ⊢ . k B)
    (() . ⊢ . t_2 Bool)
    (⊢c {x : B t_1} B)
@@ -64,9 +66,11 @@
 (define-judgment-form λc
   #:mode (⊢c I O)
   #:contract (⊢c c T)
+  
   [(((x B)) . ⊢ . t Bool)
    ---------------------- "BaseC"
    (⊢c {x : B t} B)]
+  
   [(⊢c c_1 T_1)
    (⊢c c_2 T_2)
    ------------------------------ "FunC"
