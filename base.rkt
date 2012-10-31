@@ -12,7 +12,7 @@
   [(T S) (T -> T)]
   [(t s) x k (λ (x : T) t) (t t) (⇑ l T) ({x : B t} t k l) (O t ...)]
   [(v w) k (λ (x : T) t)]
-  [(r q) v (⇑ l) error]
+  [(r q) v (⇑ l T) error]
   [(E F) (hole t) (v hole) ({x : B t} hole k l) (O hole t ...) (O v ... hole)]
   [(Γ ∆) ((x T) ...)]
   [O pos nonzero = pred]
@@ -30,7 +30,6 @@
    [--> ({x : B t} true k l) k "OK"]
    [--> ({x : B t} false k l) (⇑ l (ty k)) "Fail"]
    [--> (in-hole E (⇑ l T)) (⇑ l T) "Blame"]
-   [--> (⇑ l T) (⇑ l) "Erase"]
    [--> (O v ...) (δ O v ...) "Prim"]))
 
 (define-metafunction base
@@ -73,24 +72,7 @@
    -------------------------- "App"
    (Γ . ⊢base . (t_1 t_2) T_2)]
   
-  [(Γ . ⊢base . (⇑ l T) T) "Blame"]
-  
-  [(Γ . ⊢base . t Int)
-   ----------------------- "Pos"
-   (Γ . ⊢base . (pos t) Bool)]
-  
-  [(Γ . ⊢base . t Int)
-   --------------------------- "Nonzero"
-   (Γ . ⊢base . (nonzero t) Bool)]
-  
-  [(Γ . ⊢base . t_1 B)
-   (Γ . ⊢base . t_2 B)
-   --------------------------- "Equal"
-   (Γ . ⊢base . (= t_1 t_2) Bool)]
-  
-  [(Γ . ⊢base . t Int)
-   ----------------------- "Pred"
-   (Γ . ⊢base . (pred t) Int)])
+  [(Γ . ⊢base . (⇑ l T) T) "Blame"])
 
 (define-metafunction base
   ty : k -> B
@@ -99,12 +81,14 @@
   [(ty number) Int])
 
 (define-metafunction base
+  lookup : x ((x any) ...) -> any or #f
   [(lookup x ()) #f]
   [(lookup x ((x any) (x_1 any_1) ...)) any]
   [(lookup x ((x_1 any_1) (x_2 any_2) ...))
    (lookup x ((x_2 any_2) ...))])
 
 (define-metafunction base
+  extend : x any ((x any) ...) -> ((x any) ...)
   [(extend x any ((x_1 any_1) ...))
    ((x any) (x_1 any_1) ...)])
 

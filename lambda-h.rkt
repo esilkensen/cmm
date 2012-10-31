@@ -45,15 +45,15 @@
    ------------------ "Const"
    (Γ . ⊢ . k T)]
   
-  [(⊢c S)
-   ------------------ "Blame"
-   (∆ . ⊢ . (⇑ l S) S)]
+  [(Γ . ⊢ . t_1 (T_1 -> T_2))
+   (Γ . ⊢ . t_2 T_0)
+   (T_0 . <: . T_1)
+   ------------------------ "App"
+   (Γ . ⊢ . (t_1 t_2) T_2)]
   
-;  [(∆ . ⊢ . s S_1)
-;   (⊢c S_2)
-;   (S_1 . <: . S_2)
-;   ---------------- "S_Sub"
-;   (∆ . ⊢ . s S_2)]
+  [(⊢c S)
+   -------------------- "Blame"
+   (∆ . ⊢ . (⇑ l S) S)]
   
   [(() . ⊢ . k {x_1 : B true})
    (() . ⊢ . s_2 {x_2 : Bool true})
@@ -61,7 +61,24 @@
    (side-condition
     (s_2 . ⊃ . (subst x k s_1)))
    --------------------------------------------- "Checking"
-   (() . ⊢ . ({x : B s_1} s_2 k l) {x : B s_1})])
+   (() . ⊢ . ({x : B s_1} s_2 k l) {x : B s_1})]
+  
+  [(∆ . ⊢ . s {x : Int true})
+   ---------------------------------- "Pos"
+   (∆ . ⊢ . (pos s) {x : Bool true})]
+  
+  [(∆ . ⊢ . s {x : Int true})
+   -------------------------------------- "Nonzero"
+   (∆ . ⊢ . (nonzero s) {x : Bool true})]
+  
+  [(∆ . ⊢ . s_1 {x_1 : B true})
+   (∆ . ⊢ . s_2 {x_2 : B true})
+   ---------------------------------------- "Equal"
+   (∆ . ⊢ . (= s_1 s_2) {x_1 : Bool true})]
+  
+  [(∆ . ⊢ . s {x : Int true})
+   ---------------------------------- "Pred"
+   (∆ . ⊢ . (pred s) {x : Int true})])
 
 (define-judgment-form λh
   #:mode (<: I I)
@@ -96,10 +113,10 @@
 (define-metafunction λh
   ⊃ : s s -> #t or #f
   [(⊃ s_1 s_2)
-   ,(if (eq? (term true) (term B_1))
-        (eq? (term true) (term B_2))
+   ,(if (eq? (term true) (term v_1))
+        (eq? (term true) (term v_2))
         #t)
-   (where ((B_1) (B_2))
+   (where ((v_1) (v_2))
           (,(apply-reduction-relation* ->λh (term s_1))
            ,(apply-reduction-relation* ->λh (term s_2))))])
 
@@ -109,9 +126,11 @@
   [(K Int) (-1 0 1)])
 
 (define-metafunction λh
+  ty-h : k -> S
   [(ty-h k) {x : (ty k) (= x k)}])
 
 (define-metafunction λh
+  erase : S -> any
   [(erase {x : B s}) B]
   [(erase (S_1 -> S_2)) ((erase S_1) -> (erase S_2))])
 
@@ -120,31 +139,59 @@
 (module+ test
   (define s1 (term (({x : Int true} ⇒ {x : Int true} "l") 1)))
   (define q1 (term 1))
+  (test-->> ->λh s1 q1)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,s1 {x : Int true})) #t)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,q1 {x : Int (= x 1)})) #t)
+  (test-equal
+   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int true})) #t)
   
   (define s2 (term (({x : Int true} ⇒ {x : Int (nonzero x)} "l") 1)))
   (define q2 (term 1))
+  (define S2 (term {x : Int (nonzero x)}))
+  (test-->> ->λh s2 q2)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,s2 {x : Int (nonzero x)})) #t)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,q2 {x : Int (= x 1)})) #t)
+  (test-equal
+   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int (nonzero x)})) #t)
   
-  (define s3 (term (({x : Int true} ⇒ {y : Int (pos y)} "l") 1)))
+  (define s3 (term (({x : Int true} ⇒ {x : Int (pos x)} "l") 1)))
   (define q3 (term 1))
+  (test-->> ->λh s3 q3)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,s3 {x : Int (pos x)})) #t)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,q3 {x : Int (= x 1)})) #t)
+  (test-equal
+   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int (pos x)})) #t)
   
   (define s4 (term (({x : Int true} ⇒ {y : Int (pos y)} "l") -1)))
-  (define q4 (term (⇑ "l")))
+  (define q4 (term (⇑ "l" {x : Int (= x -1)})))
+  (test-->> ->λh s4 q4)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,s4 {y : Int (pos y)})) #t)
+  (test-equal
+   (judgment-holds (() . ⊢ . ,q4 {x : Int (= x -1)})) #t)
+  (test-equal
+   (judgment-holds ({x : Int (= x -1)} . <: . {y : Int (pos y)})) #t)
   
   (define s5 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 0)))
-  (define q5 (term (⇑ "l")))
+  (define q5 (term (⇑ "l" {x : Int (= x 0)})))
+  (test-->> ->λh s5 q5)
   
   (define s6 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 1)))
-  (define q6 (term (⇑ "l")))
+  (define q6 (term (⇑ "l" {x : Int (= x 0)})))
+  (test-->> ->λh s5 q6)
   
   (define s7 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 2)))
   (define q7 (term 1))
-  
-  (for ([s (list s1 s2 s3 s4 s5 s6 s7)]
-        [q (list q1 q2 q3 q4 q5 q6 q7)])
-    (test-->> ->λh s q)))
+  (test-->> ->λh s7 q7))
