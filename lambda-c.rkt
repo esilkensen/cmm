@@ -2,14 +2,16 @@
 
 (require redex "base.rkt")
 
+(provide λc ->λc ⊢λc)
+
 ;; ----------------------------------------------------------------------------
 ;; Syntax for λc
 
 (define-extended-language λc base
-  (T .... B)
-  (t .... (c l l))
-  (v .... (c l l) ((c ↦ c l l) v))
-  (c {x : B t} (c ↦ c)))
+  [T .... B]
+  [t .... (c l l)]
+  [v .... (c l l) ((c ↦ c l l) v)]
+  [c {x : B t} (c ↦ c)])
 
 ;; ----------------------------------------------------------------------------
 ;; Operational semantics for λc
@@ -64,6 +66,16 @@
    (Γ . ⊢ . (pred t) Int)])
 
 (define-judgment-form λc
+  #:mode (⊢λc I I I)
+  #:contract (⊢λc Γ t T)
+  
+  [(Γ . ⊢λc . (⇑ l) T) "Blame"]
+  
+  [(Γ . ⊢ . t T)
+   ---------------- "Compat"
+   (Γ . ⊢λc . t T)])
+
+(define-judgment-form λc
   #:mode (⊢c I O)
   #:contract (⊢c c T)
   
@@ -99,15 +111,15 @@
   (define r3 (term 1))
   
   (define t4 (term (({y : Int (pos y)} "l" "l'") -1)))
-  (define r4 (term (⇑ "l" Int)))
+  (define r4 (term (⇑ "l")))
   
   (define t5 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
                      (λ (x : Int) (pred x))) 0)))
-  (define r5 (term (⇑ "l'" Int)))
+  (define r5 (term (⇑ "l'")))
   
   (define t6 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
                      (λ (x : Int) (pred x))) 1)))
-  (define r6 (term (⇑ "l" Int)))
+  (define r6 (term (⇑ "l")))
   
   (define t7 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
                      (λ (x : Int) (pred x))) 2)))
@@ -116,5 +128,5 @@
   (for ([t (list t1 t2 t3 t4 t5 t6 t7)]
         [r (list r1 r2 r3 r4 r5 r6 r7)])
     (test-->> ->λc t r)
-    (test-equal (judgment-holds (() . ⊢ . ,t Int)) #t)
-    (test-equal (judgment-holds (() . ⊢ . ,r Int)) #t)))
+    (test-equal (judgment-holds (() . ⊢λc . ,t Int)) #t)
+    (test-equal (judgment-holds (() . ⊢λc . ,r Int)) #t)))

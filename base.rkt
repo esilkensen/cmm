@@ -10,9 +10,9 @@
 (define-language base
   [B Bool Int]
   [(T S) (T -> T)]
-  [(t s) x k (λ (x : T) t) (t t) (⇑ l T) ({x : B t} t k l) (O t ...)]
+  [(t s) x k (λ (x : T) t) (t t) (⇑ l) ({x : B t} t k l) (O t ...)]
   [(v w) k (λ (x : T) t)]
-  [(r q) v (⇑ l T) error]
+  [(r q) v (⇑ l) error]
   [(E F) (hole t) (v hole) ({x : B t} hole k l) (O hole t ...) (O v ... hole)]
   [(Γ ∆) ((x T) ...)]
   [O pos nonzero = pred]
@@ -28,8 +28,8 @@
    base
    [--> ((λ (x : T) t) v) (subst x v t) "Beta"]
    [--> ({x : B t} true k l) k "OK"]
-   [--> ({x : B t} false k l) (⇑ l (ty k)) "Fail"]
-   [--> (in-hole E (⇑ l T)) (⇑ l T) "Blame"]
+   [--> ({x : B t} false k l) (⇑ l) "Fail"]
+   [--> (in-hole E (⇑ l)) (⇑ l) "Blame"]
    [--> (O v ...) (δ O v ...) "Prim"]))
 
 (define-metafunction base
@@ -70,9 +70,7 @@
   [(Γ . ⊢base . t_1 (T_1 -> T_2))
    (Γ . ⊢base . t_2 T_1)
    -------------------------- "App"
-   (Γ . ⊢base . (t_1 t_2) T_2)]
-  
-  [(Γ . ⊢base . (⇑ l T) T) "Blame"])
+   (Γ . ⊢base . (t_1 t_2) T_2)])
 
 (define-metafunction base
   ty : k -> B

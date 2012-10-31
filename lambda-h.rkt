@@ -2,13 +2,15 @@
 
 (require redex "base.rkt")
 
+(provide λh ->λh ⊢λh)
+
 ;; ----------------------------------------------------------------------------
 ;; Syntax for λh
 
 (define-extended-language λh base
-  (S .... {x : B s})
-  (s .... (S ⇒ S l))
-  (w .... (S ⇒ S l) (((S -> S) ⇒ (S -> S) l) w)))
+  [S .... {x : B s}]
+  [s .... (S ⇒ S l)]
+  [w .... (S ⇒ S l) (((S -> S) ⇒ (S -> S) l) w)])
 
 ;; ----------------------------------------------------------------------------
 ;; Operational semantics for λh
@@ -22,7 +24,6 @@
    [--> (({x_1 : B s_1} ⇒ {x_2 : B s_2} l) k)
         ({x_2 : B s_2} (subst x_2 k s_2) k l)
         "CCheck"]
-   [--> ({x : B t} false k l) (⇑ l (ty-h k)) "Fail"]
    [--> (in-hole F s_1) (in-hole F s_2)
         (where (s_2) ,(apply-reduction-relation ->λh (term s_1)))
         "Compat"]))
@@ -51,10 +52,6 @@
    ------------------------ "App"
    (Γ . ⊢ . (t_1 t_2) T_2)]
   
-  [(⊢swf S)
-   -------------------- "Blame"
-   (∆ . ⊢ . (⇑ l S) S)]
-  
   [(() . ⊢ . k {x_1 : B true})
    (() . ⊢ . s_2 {x_2 : Bool true})
    (⊢swf {x : B s_1})
@@ -81,14 +78,22 @@
    (∆ . ⊢ . (pred s) {x : Int true})])
 
 (define-judgment-form λh
-  #:mode (⊢h I I I)
-  #:contract (⊢h ∆ s S)
+  #:mode (⊢λh I I I)
+  #:contract (⊢λh ∆ s S)
+  
+  [(⊢swf S)
+   -------------------- "Blame"
+   (∆ . ⊢λh . (⇑ l) S)]
   
   [(∆ . ⊢ . s S_1)
    (⊢swf S_2)
    (S_1 . <: . S_2)
-   ------------------- "Sub"
-   (∆ . ⊢h . s S_2)])
+   ------------------ "Sub"
+   (∆ . ⊢λh . s S_2)]
+  
+  [(∆ . ⊢ . s S)
+   ---------------- "Compat"
+   (∆ . ⊢λh . s S)])
 
 (define-judgment-form λh
   #:mode (<: I I)
@@ -148,52 +153,42 @@
 
 (module+ test
   (define s1 (term (({x : Int true} ⇒ {x : Int true} "l") 1)))
-  (define q1 (term 1))
-  (test-->> ->λh s1 q1)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,s1 {x : Int true})) #t)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,q1 {x : Int true})) #t)
+  (test-->> ->λh s1 1)
+  (test-equal (judgment-holds (() . ⊢λh . ,s1 {x : Int true})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . 1 {x : Int true})) #t)
   
   (define s2 (term (({x : Int true} ⇒ {x : Int (nonzero x)} "l") 1)))
-  (define q2 (term 1))
-  (define S2 (term {x : Int (nonzero x)}))
-  (test-->> ->λh s2 q2)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,s2 {x : Int (nonzero x)})) #t)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,q2 {x : Int (nonzero x)})) #t)
+  (test-->> ->λh s2 1)
+  (test-equal (judgment-holds (() . ⊢λh . ,s2 {x : Int (nonzero x)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . 1 {x : Int (nonzero x)})) #t)
   
   (define s3 (term (({x : Int true} ⇒ {x : Int (pos x)} "l") 1)))
-  (define q3 (term 1))
-  (test-->> ->λh s3 q3)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,s3 {x : Int (pos x)})) #t)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,q3 {x : Int (pos x)})) #t)
+  (test-->> ->λh s3 1)
+  (test-equal (judgment-holds (() . ⊢λh . ,s3 {x : Int (pos x)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . 1 {x : Int (pos x)})) #t)
   
   (define s4 (term (({x : Int true} ⇒ {y : Int (pos y)} "l") -1)))
-  (define q4 (term (⇑ "l" {x : Int (= x -1)})))
-  (test-->> ->λh s4 q4)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,s4 {y : Int (pos y)})) #t)
-  (test-equal
-   (judgment-holds (() . ⊢h . ,q4 {y : Int (pos y)})) #t)
+  (test-->> ->λh s4 (term (⇑ "l")))
+  (test-equal (judgment-holds (() . ⊢λh . ,s4 {y : Int (pos y)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . (⇑ "l") {y : Int (pos y)})) #t)
   
   (define s5 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 0)))
-  (define q5 (term (⇑ "l" {x : Int (= x 0)})))
-  (test-->> ->λh s5 q5)
+  (test-->> ->λh s5 (term (⇑ "l")))
+  (test-equal (judgment-holds (() . ⊢λh . ,s5 {y : Int (pos y)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . (⇑ "l") {y : Int (pos y)})) #t)
   
   (define s6 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 1)))
-  (define q6 (term (⇑ "l" {x : Int (= x 0)})))
-  (test-->> ->λh s5 q6)
+  (test-->> ->λh s6 (term (⇑ "l")))
+  (test-equal (judgment-holds (() . ⊢λh . ,s6 {y : Int (pos y)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . (⇑ "l") {y : Int (pos y)})) #t)
   
   (define s7 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
                      (λ (x : {x : Int true}) (pred x))) 2)))
-  (define q7 (term 1))
-  (test-->> ->λh s7 q7))
+  (test-->> ->λh s7 1)
+  (test-equal (judgment-holds (() . ⊢λh . ,s7 {y : Int (pos y)})) #t)
+  (test-equal (judgment-holds (() . ⊢λh . 1 {y : Int (pos y)})) #t))
