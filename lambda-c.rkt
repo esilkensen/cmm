@@ -101,32 +101,20 @@
 ;; ----------------------------------------------------------------------------
 
 (module+ test
-  (define t1 (term (({x : Int true} "l" "l'") 1)))
-  (define r1 (term 1))
-  
-  (define t2 (term (({x : Int (nonzero x)} "l" "l'") 1)))
-  (define r2 (term 1))
-  
-  (define t3 (term (({y : Int (pos y)} "l" "l'") 1)))
-  (define r3 (term 1))
-  
-  (define t4 (term (({y : Int (pos y)} "l" "l'") -1)))
-  (define r4 (term (⇑ "l")))
-  
-  (define t5 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
-                     (λ (x : Int) (pred x))) 0)))
-  (define r5 (term (⇑ "l'")))
-  
-  (define t6 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
-                     (λ (x : Int) (pred x))) 1)))
-  (define r6 (term (⇑ "l")))
-  
-  (define t7 (term (((({x : Int (nonzero x)} ↦ {x : Int (pos x)}) "l" "l'")
-                     (λ (x : Int) (pred x))) 2)))
-  (define r7 (term 1))
-  
-  (for ([t (list t1 t2 t3 t4 t5 t6 t7)]
-        [r (list r1 r2 r3 r4 r5 r6 r7)])
+  (define (test t r T)
     (test-->> ->λc t r)
-    (test-equal (judgment-holds (() . ⊢λc . ,t Int)) #t)
-    (test-equal (judgment-holds (() . ⊢λc . ,r Int)) #t)))
+    (test-equal (judgment-holds (() . ⊢λc . ,t ,T)) #t)
+    (test-equal (judgment-holds (() . ⊢λc . ,r ,T)) #t))
+  
+  (define I (term {x : Int true}))
+  (define N (term {x : Int (nonzero x)}))
+  (define P (term {x : Int (pos x)}))
+  (define pred (term (λ (x : Int) (pred x))))
+  
+  (test (term ((,I "l" "l'") 1)) 1 (term Int))
+  (test (term ((,N "l" "l'") 1)) 1 (term Int))
+  (test (term ((,P "l" "l'") 1)) 1 (term Int))
+  (test (term ((,P "l" "l'") -1)) (term (⇑ "l")) (term Int))
+  (test (term ((((,N ↦ ,P) "l" "l'") ,pred) 0)) (term (⇑ "l'")) (term Int))
+  (test (term ((((,N ↦ ,P) "l" "l'") ,pred) 1)) (term (⇑ "l")) (term Int))
+  (test (term ((((,N ↦ ,P) "l" "l'") ,pred) 2)) 1 (term Int)))
