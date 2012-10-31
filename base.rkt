@@ -2,7 +2,7 @@
 
 (require redex)
 
-(provide base ->base ⊢base δ ty lookup extend equal subst)
+(provide base ->base ⊢base δ ty lookup extend equal all subst)
 
 ;;----------------------------------------------------------------------------
 ;; Base types and constants and common syntax for λc and λh
@@ -95,6 +95,12 @@
 (define-metafunction base
   [(equal any any) #t]
   [(equal any_1 any_2) #f])
+
+(define-metafunction base
+  all : (any ...) -> #t or #f
+  [(all ()) #t]
+  [(all (#f any ...)) #f]
+  [(all (#t any ...)) (all (any ...))])
 
 (define-metafunction base
   [(subst x any_1 (λ (x : T) any_2))
