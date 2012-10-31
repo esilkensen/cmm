@@ -34,8 +34,8 @@
   #:mode (⊢ I I O)
   #:contract (⊢ ∆ s S)
   
-  [(⊢c S_1)
-   (⊢c S_2)
+  [(⊢swf S_1)
+   (⊢swf S_2)
    (side-condition
     (equal (erase S_1) (erase S_2)))
    ------------------------------------- "Cast"
@@ -51,13 +51,13 @@
    ------------------------ "App"
    (Γ . ⊢ . (t_1 t_2) T_2)]
   
-  [(⊢c S)
+  [(⊢swf S)
    -------------------- "Blame"
    (∆ . ⊢ . (⇑ l S) S)]
   
   [(() . ⊢ . k {x_1 : B true})
    (() . ⊢ . s_2 {x_2 : Bool true})
-   (⊢c {x : B s_1})
+   (⊢swf {x : B s_1})
    (side-condition
     (s_2 . ⊃ . (subst x k s_1)))
    --------------------------------------------- "Checking"
@@ -81,6 +81,16 @@
    (∆ . ⊢ . (pred s) {x : Int true})])
 
 (define-judgment-form λh
+  #:mode (⊢h I I I)
+  #:contract (⊢h ∆ s S)
+  
+  [(∆ . ⊢ . s S_1)
+   (⊢swf S_2)
+   (S_1 . <: . S_2)
+   ------------------- "Sub"
+   (∆ . ⊢h . s S_2)])
+
+(define-judgment-form λh
   #:mode (<: I I)
   #:contract (<: S S)
   
@@ -96,19 +106,19 @@
    ((S_11 -> S_12) . <: . (S_21 -> S_22))])
 
 (define-judgment-form λh
-  #:mode (⊢c I)
-  #:contract (⊢c S)
+  #:mode (⊢swf I)
+  #:contract (⊢swf S)
   
-  [(⊢c {x : B true}) "SWF_Raw"]
+  [(⊢swf {x : B true}) "SWF_Raw"]
   
   [(((x {x : B true})) . ⊢ . s {x : Bool true})
    -------------------------------------------- "SWF_Refine"
-   (⊢c {x : B s})]
+   (⊢swf {x : B s})]
   
-  [(⊢c S_1)
-   (⊢c S_2)
+  [(⊢swf S_1)
+   (⊢swf S_2)
    ------------------ "SWF_Fun"
-   (⊢c (S_1 -> S_2))])
+   (⊢swf (S_1 -> S_2))])
 
 (define-metafunction λh
   ⊃ : s s -> #t or #f
@@ -141,42 +151,34 @@
   (define q1 (term 1))
   (test-->> ->λh s1 q1)
   (test-equal
-   (judgment-holds (() . ⊢ . ,s1 {x : Int true})) #t)
+   (judgment-holds (() . ⊢h . ,s1 {x : Int true})) #t)
   (test-equal
-   (judgment-holds (() . ⊢ . ,q1 {x : Int (= x 1)})) #t)
-  (test-equal
-   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int true})) #t)
+   (judgment-holds (() . ⊢h . ,q1 {x : Int true})) #t)
   
   (define s2 (term (({x : Int true} ⇒ {x : Int (nonzero x)} "l") 1)))
   (define q2 (term 1))
   (define S2 (term {x : Int (nonzero x)}))
   (test-->> ->λh s2 q2)
   (test-equal
-   (judgment-holds (() . ⊢ . ,s2 {x : Int (nonzero x)})) #t)
+   (judgment-holds (() . ⊢h . ,s2 {x : Int (nonzero x)})) #t)
   (test-equal
-   (judgment-holds (() . ⊢ . ,q2 {x : Int (= x 1)})) #t)
-  (test-equal
-   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int (nonzero x)})) #t)
+   (judgment-holds (() . ⊢h . ,q2 {x : Int (nonzero x)})) #t)
   
   (define s3 (term (({x : Int true} ⇒ {x : Int (pos x)} "l") 1)))
   (define q3 (term 1))
   (test-->> ->λh s3 q3)
   (test-equal
-   (judgment-holds (() . ⊢ . ,s3 {x : Int (pos x)})) #t)
+   (judgment-holds (() . ⊢h . ,s3 {x : Int (pos x)})) #t)
   (test-equal
-   (judgment-holds (() . ⊢ . ,q3 {x : Int (= x 1)})) #t)
-  (test-equal
-   (judgment-holds ({x : Int (= x 1)} . <: . {x : Int (pos x)})) #t)
+   (judgment-holds (() . ⊢h . ,q3 {x : Int (pos x)})) #t)
   
   (define s4 (term (({x : Int true} ⇒ {y : Int (pos y)} "l") -1)))
   (define q4 (term (⇑ "l" {x : Int (= x -1)})))
   (test-->> ->λh s4 q4)
   (test-equal
-   (judgment-holds (() . ⊢ . ,s4 {y : Int (pos y)})) #t)
+   (judgment-holds (() . ⊢h . ,s4 {y : Int (pos y)})) #t)
   (test-equal
-   (judgment-holds (() . ⊢ . ,q4 {x : Int (= x -1)})) #t)
-  (test-equal
-   (judgment-holds ({x : Int (= x -1)} . <: . {y : Int (pos y)})) #t)
+   (judgment-holds (() . ⊢h . ,q4 {y : Int (pos y)})) #t)
   
   (define s5 (term (((({x : Int (nonzero x)} -> {x : Int true})
                       ⇒ ({x : Int true} -> {y : Int (pos y)}) "l")
