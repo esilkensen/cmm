@@ -31,6 +31,24 @@
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λh
 
+(define-judgment-form λh
+  #:mode (⊢λh I I I)
+  #:contract (⊢λh ∆ s S)
+  
+  [(⊢swf S)
+   -------------------- "Blame"
+   (∆ . ⊢λh . (⇑ l) S)]
+  
+  [(∆ . ⊢ . s S_1)
+   (⊢swf S_2)
+   (S_1 . <: . S_2)
+   ------------------ "Sub"
+   (∆ . ⊢λh . s S_2)]
+  
+  [(∆ . ⊢ . s S)
+   ---------------- "Compat"
+   (∆ . ⊢λh . s S)])
+
 (define-extended-judgment-form λh ⊢base
   #:mode (⊢ I I O)
   #:contract (⊢ ∆ s S)
@@ -76,24 +94,6 @@
   [(∆ . ⊢ . s {x : Int true})
    ---------------------------------- "Pred"
    (∆ . ⊢ . (pred s) {x : Int true})])
-
-(define-judgment-form λh
-  #:mode (⊢λh I I I)
-  #:contract (⊢λh ∆ s S)
-  
-  [(⊢swf S)
-   -------------------- "Blame"
-   (∆ . ⊢λh . (⇑ l) S)]
-  
-  [(∆ . ⊢ . s S_1)
-   (⊢swf S_2)
-   (S_1 . <: . S_2)
-   ------------------ "Sub"
-   (∆ . ⊢λh . s S_2)]
-  
-  [(∆ . ⊢ . s S)
-   ---------------- "Compat"
-   (∆ . ⊢λh . s S)])
 
 (define-judgment-form λh
   #:mode (<: I I)

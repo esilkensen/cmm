@@ -32,6 +32,16 @@
 ;; ----------------------------------------------------------------------------
 ;; Typing rules for λc
 
+(define-judgment-form λc
+  #:mode (⊢λc I I I)
+  #:contract (⊢λc Γ t T)
+  
+  [(Γ . ⊢λc . (⇑ l) T) "Blame"]
+  
+  [(Γ . ⊢ . t T)
+   ---------------- "Compat"
+   (Γ . ⊢λc . t T)])
+
 (define-extended-judgment-form λc ⊢base
   #:mode (⊢ I I O)
   #:contract (⊢ Γ t T)
@@ -64,16 +74,6 @@
   [(Γ . ⊢ . t Int)
    ----------------------- "Pred"
    (Γ . ⊢ . (pred t) Int)])
-
-(define-judgment-form λc
-  #:mode (⊢λc I I I)
-  #:contract (⊢λc Γ t T)
-  
-  [(Γ . ⊢λc . (⇑ l) T) "Blame"]
-  
-  [(Γ . ⊢ . t T)
-   ---------------- "Compat"
-   (Γ . ⊢λc . t T)])
 
 (define-judgment-form λc
   #:mode (⊢c I O)
