@@ -2,20 +2,36 @@
 
 (require redex)
 
-(provide base δ)
+(provide base ->base ⊢base δ ty lookup extend equal subst)
 
 ;;----------------------------------------------------------------------------
-;; Base types and constants for λc and λh
+;; Base types and constants and common syntax for λc and λh
 
 (define-language base
-  (B Bool Int)
-  (k true false number)
-  (O pos nonzero = pred)
-  (l string)
-  (x variable-not-otherwise-mentioned))
+  [B Bool Int]
+  [(T S) (T -> T)]
+  [(t s) x k (λ (x : T) t) (t t) (⇑ l T) ({x : B t} t k l) (O t ...)]
+  [(v w) k (λ (x : T) t)]
+  [(r q) v (⇑ l) error]
+  [(E F) (hole t) (v hole) ({x : B t} hole k l) (O hole t ...) (O v ... hole)]
+  [(Γ ∆) ((x T) ...)]
+  [O pos nonzero = pred]
+  [l string]
+  [k true false number]
+  [x variable-not-otherwise-mentioned])
 
 ;; ----------------------------------------------------------------------------
-;; Utility metafunctions for λc and λh
+;; Common reduction rules for λc and λh
+
+(define ->base
+  (reduction-relation
+   base
+   [--> ((λ (x : T) t) v) (subst x v t) "Beta"]
+   [--> ({x : B t} true k l) k "OK"]
+   [--> ({x : B t} false k l) (⇑ l (ty k)) "Fail"]
+   [--> (in-hole E (⇑ l T)) (⇑ l T) "Blame"]
+   [--> (⇑ l T) (⇑ l) "Erase"]
+   [--> (O v ...) (δ O v ...) "Prim"]))
 
 (define-metafunction base
   δ : O k ... -> k
@@ -32,3 +48,94 @@
         (term true)
         (term false))]
   [(δ pred k) ,(- (term k) 1)])
+
+;; ----------------------------------------------------------------------------
+;; Common typing rules for λc and λh
+
+(define-judgment-form base
+  #:mode (⊢base I I O)
+  #:contract (⊢base Γ t T)
+  
+  [(where T (lookup x Γ))
+   ---------------------- "Var"
+   (Γ . ⊢base . x T)]
+  
+  [(where T (ty k))
+   ---------------- "Const"
+   (Γ . ⊢base . k T)]
+  
+  [((extend x T_1 Γ) . ⊢base . t T_2)
+   --------------------------------------- "Lam"
+   (Γ . ⊢base . (λ (x : T_1) t) (T_1 -> T_2))]
+  
+  [(Γ . ⊢base . t_1 (T_1 -> T_2))
+   (Γ . ⊢base . t_2 T_1)
+   -------------------------- "App"
+   (Γ . ⊢base . (t_1 t_2) T_2)]
+  
+  [(Γ . ⊢base . (⇑ l T) T) "Blame"]
+  
+  [(Γ . ⊢base . t Int)
+   ----------------------- "Pos"
+   (Γ . ⊢base . (pos t) Bool)]
+  
+  [(Γ . ⊢base . t Int)
+   --------------------------- "Nonzero"
+   (Γ . ⊢base . (nonzero t) Bool)]
+  
+  [(Γ . ⊢base . t_1 B)
+   (Γ . ⊢base . t_2 B)
+   --------------------------- "Equal"
+   (Γ . ⊢base . (= t_1 t_2) Bool)]
+  
+  [(Γ . ⊢base . t Int)
+   ----------------------- "Pred"
+   (Γ . ⊢base . (pred t) Int)])
+
+(define-metafunction base
+  ty : k -> B
+  [(ty true) Bool]
+  [(ty false) Bool]
+  [(ty number) Int])
+
+(define-metafunction base
+  [(lookup x ()) #f]
+  [(lookup x ((x any) (x_1 any_1) ...)) any]
+  [(lookup x ((x_1 any_1) (x_2 any_2) ...))
+   (lookup x ((x_2 any_2) ...))])
+
+(define-metafunction base
+  [(extend x any ((x_1 any_1) ...))
+   ((x any) (x_1 any_1) ...)])
+
+;;----------------------------------------------------------------------------
+
+(define-metafunction base
+  [(equal any any) #t]
+  [(equal any_1 any_2) #f])
+
+(define-metafunction base
+  [(subst x any_1 (λ (x : T) any_2))
+   (λ (x : T) any_2)]
+  [(subst x_1 any_1 (λ (x_2 : T) any_2))
+   (λ (x_new : T)
+     (subst x_1 any_1 (subst-vars (x_2 x_new) any_2)))
+   (where x_new
+          ,(variable-not-in
+            (term (x_1 any_1 any_2)) 
+            (term x_2)))]
+  [(subst x_1 any_1 x_1) any_1]
+  [(subst x_1 any_1 x_2) x_2]
+  [(subst x_1 any_1 (any_2 ...))
+   ((subst x_1 any_1 any_2) ...)]
+  [(subst x_1 any_1 any_2) any_2])
+
+(define-metafunction base
+  [(subst-vars (x_1 any_1) x_1) any_1]
+  [(subst-vars (x_1 any_1) (any_2 ...)) 
+   ((subst-vars (x_1 any_1) any_2) ...)]
+  [(subst-vars (x_1 any_1) any_2) any_2]
+  [(subst-vars (x_1 any_1) (x_2 any_2) ... any_3) 
+   (subst-vars (x_1 any_1) 
+               (subst-vars (x_2 any_2) ... any_3))]
+  [(subst-vars any) any])
