@@ -2,6 +2,8 @@
 
 (require redex "base.rkt" "latent.rkt" "manifest.rkt")
 
+(provide ψ φ)
+
 ;; ----------------------------------------------------------------------------
 ;; Translating from λh to λc
 
