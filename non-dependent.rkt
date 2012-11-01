@@ -35,12 +35,6 @@
   [(φ ({x : B t_1} t_2 k l)) ({x : B (φ t_1)} (φ t_2) k l)]
   [(φ (O t ...)) (O (φ t) ...)])
 
-(define-metafunction λc
-  [(raw B) {x : B true}]
-  [(raw {x : B t}) {x : B true}]
-  [(raw (T_1 -> T_2)) ((raw T_1) -> (raw T_2))]
-  [(raw (c_1 ↦ c_2)) ((raw c_1) -> (raw c_2))])
-
 (module+ test
   (define (test-ψ)
     (define (test s r)

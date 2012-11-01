@@ -2,7 +2,7 @@
 
 (require redex "base.rkt")
 
-(provide λc ->λc ⊢λc)
+(provide λc ->λc ⊢λc raw)
 
 ;; ----------------------------------------------------------------------------
 ;; Syntax for λc
@@ -97,6 +97,12 @@
    (where ((v_1) (v_2))
           (,(apply-reduction-relation* ->λc (term t_1))
            ,(apply-reduction-relation* ->λc (term t_2))))])
+
+(define-metafunction λc
+  [(raw B) {x : B true}]
+  [(raw {x : B t}) {x : B true}]
+  [(raw (T_1 -> T_2)) ((raw T_1) -> (raw T_2))]
+  [(raw (c_1 ↦ c_2)) ((raw c_1) -> (raw c_2))])
 
 ;; ----------------------------------------------------------------------------
 
