@@ -2,7 +2,7 @@
 
 (require redex "base.rkt")
 
-(provide λh ->λh ⊢λh)
+(provide λh ->λh ⊢λh erase)
 
 ;; ----------------------------------------------------------------------------
 ;; Syntax for λh
