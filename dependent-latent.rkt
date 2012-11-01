@@ -37,15 +37,19 @@
 
 ;; ----------------------------------------------------------------------------
 
-(module+ test
-  (define (test ->dep-λc t r)
-    (test-->> ->dep-λc t r))
-  
+(module+ test  
   (define Pos (term {x : Int (pos x)}))
   (define (f n)
     (term (((g : (,Pos ↦ ,Pos) ↦ {z : Int (= z (g 0))}) "l_f" "l_g")
            (λ (g : (Int -> Int)) (g ,n)))))
   (define t1 (term (,(f 1) (λ (x : Int) 1))))
+  (test-->> ->lax-λc t1 1)
+  (test-->> ->picky-λc t1 (term (⇑ "l_f")))
   
-  (test ->lax-λc t1 1)
-  (test ->picky-λc t1 (term (⇑ "l_f"))))
+  (define I (term {x : Int true}))
+  (define N (term {x : Int (nonzero x)}))
+  (define t2 (term ((((f : (,N ↦ ,I) ↦ {z : Int (= (f 0) 0)}) "l_f" "l_g")
+                     (λ (f : (Int -> Int)) (f 5)))
+                    (λ (x : Int) x))))
+  (test-->> ->lax-λc t2 5)
+  (test-->> ->picky-λc t2 (term (⇑ "l_f"))))
