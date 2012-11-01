@@ -103,8 +103,16 @@
   [(all (#t any ...)) (all (any ...))])
 
 (define-metafunction base
+  [(subst x any_1 {x : B t})
+   {x : B t}]
   [(subst x any_1 (λ (x : T) any_2))
    (λ (x : T) any_2)]
+  [(subst x_1 any_1 {x_2 : B t})
+   {x_new : B (subst x_1 any_1 (subst-vars (x_2 x_new) t))}
+   (where x_new
+          ,(variable-not-in
+            (term (x_1 any_1 t))
+            (term x_2)))]
   [(subst x_1 any_1 (λ (x_2 : T) any_2))
    (λ (x_new : T)
      (subst x_1 any_1 (subst-vars (x_2 x_new) any_2)))
